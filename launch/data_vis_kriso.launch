@@ -1,0 +1,5 @@
+<launch>
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find inha_modules)/Disp/data_vis_kriso.rviz"/>
+
+
+</launch>

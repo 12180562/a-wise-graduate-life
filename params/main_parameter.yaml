@@ -1,0 +1,344 @@
+meta: |
+  update_rate:
+    - Unit: Hz
+    - The update rate for the loop from the first node to the end node.
+
+  mmg_dt:
+    - Unit: sec.
+    - The time step for the mmg calculation.
+
+  ---------------------------------------------------------------
+
+  weight_focusObs:
+    - Range: 0 < weight_focusObs <= 1
+    - The weight for the effort agent A takes to avoid agent B.
+    - The lower weight makes the later start of the avoidance action.
+    - >> 0: Nothing action to avoid. Does not consider agent B at all.
+    - 1: The same as VO. Consider the agent B completely.
+    - For more details, see the section "IV. RECIPROCAL VELOCITY OBSTACLE" in the paper "Reciprocal Velocity Obstacles for Real-time Multi-Agent Naviagation".
+
+  weight_agressivness:
+    - Range: 0 < weight_agressivness <= 1
+    - It is the extent how much you want the OS having "avoiding behavior" when there's no collision avoidance velocity.
+    - >> 0: Keep the course.
+    - 1: Give up your course and focus on the most dangerous obstacle.
+    - For more details, see the section "IV. RECIPROCAL VELOCITY OBSTACLE" in the paper "Reciprocal Velocity Obstacles for Real-time Multi-Agent Naviagation".
+
+  timeHorizon:
+    - Unit: sec.
+    - It allows for the ship going into the VO (Collision cone) as long as the expected collision time is larger than the `timeHorizon`.
+    - Range: 0 < timeHorizon
+    - >> 0: It removes all the area of the collision cone.
+    - inf: It does nothing on the original collision cone. 
+    - For More details, see the Eq.(5) in the paper "Motion Planning in Dynamic Environments using Velocity Obstacles".
+  
+  ---------------------------------------------------------------
+
+  min_targetSpeed:
+    - Unit: m/s
+    - The assumed minimum speed that the ship can have at the moment.
+
+  max_targetSpeed:
+    - Unit: m/s
+    - The assumed maximum speed that the ship can have at the moment.
+
+  num_targetSpeedCandidates:
+    - Integer.
+    - The number of the speed candidates that the ship can have.
+    - It generates the speed candidadates as many as its' setup between the range from `min_targetSpeed` to `max_targetSpeed` to derive the velocity candidates for VO.
+
+  min_targetHeading_deg_local:
+    - Unit: deg.
+    - The assumed minimum heading angle at the moment that the ship can have for the next step.
+    - The origin is the current heading angle.
+    - +: Counter clock-wise in x-y coordinates and clock-wise in y-x coordinates.
+    - -: Clock-wise in x-y coordinates and counter clock-wise in y-x coordinates.
+
+  max_targetHeading_deg_local:
+    - Unit: deg.
+    - The assumed maximum heading angle at the moment that the ship can have for the next step.
+    - The origin is the current heading angle.
+    - +: Counter clock-wise in x-y coordinates and clock-wise in y-x coordinates.
+    - -: Clock-wise in x-y coordinates and counter clock-wise in y-x coordinates.
+
+  num_targetHeadingCandidates:
+    - Integer
+    - The number of the speed candidates that the ship can have
+    - It generates the speed candidadates as many as its' setup between the range from `min_targetSpeed` to `max_targetSpeed` to derive the velocity candidates for VO.
+
+  * Caution: The min_targetSpeed, max_targetSpeed, min_targetHeading_deg_local, and max_targetHeading_deg_local are supposed to be designed by feasible acceleration that the ship can have at the moment derived by MMG equations. Here, we assume them being constant because the specifications of the thrusters and rudder servo motor are not clear. Thus. they are set up in approximate but should be in reasonable range.
+  
+  ---------------------------------------------------------------
+
+  Kp :
+    - Range: 0.0 <= Kp
+    - P gain for the PID controller for the speed control
+  Ki :
+    - Range: 0.0 <= Ki
+    - I gain for the PID controller for the speed control
+  Kd :
+    - Range: 0.0 <= Kd
+    - D gain for the PID controller for the speed control
+
+  ---------------------------------------------------------------
+
+  shipInfo_all:
+    - The condition of the ships to simulate.
+    - Format example:
+      - shipInfo_all:
+          OS_info : {
+            ship_L: 2.0,
+            ship_scale: 11.0,
+            ...,
+            }
+          TS1_info : {...}
+          TS2_info : {...}
+          TS3_info : {...}
+          ...
+      - The naming rule of the branch: OS_info, TS1_info, TS2_info, TS3_info, ...
+    - Each branch (ship) includes the condition of the corresponding ship
+      - ship_L : 
+        - Unit: m
+        - The length of the ships
+      - ship_scale : 
+        - TODO: Add an explanation
+      - ship_ID : The ID of the ship
+      - ship_domain_radius: 
+        - Unit: m
+        - The radius of the ship for the VO calculation
+      - target_speed
+        - Unit: knots
+        - The target speed of the ship
+      - initial_start_x
+        - Unit: m
+        - Initial x position of the ship
+      - initial_start_y
+        - Unit: m
+        - Initial y position of the ship
+      - initial_start_U
+        - Unit: knots
+        - Initial speed of the ship
+      initial_start_psi
+        - Unit: deg.
+        - Initial global heading angle of the ship
+        - 0: +x axis
+        - +: Counterclockwise for x-y coordinate, clockwise for y-x coordinate
+        - -: Clockwise for x-y coordinate, counter clockwise for y-x coordinate
+      include_inha_modules
+        - Boolean (True or False)
+        - True: Activate VO module
+        - False: Does not activate VO module
+
+  waypoint_List:
+    - The waypoints of each ship
+    - Format example:
+      - waypoint_list: {
+          wpts_x_OS: [-50.0, 150.0,],
+          wpts_y_OS: [150.0, 150.0,],
+          wpts_x_TS1: [...],
+          wpts_x_TS2: [...],
+          ...
+        }
+    - The naming rule of each waypoint: wpts_x_OS, wpts_y_OS, wpts_x_TS1, wpts_y_TS1, wpts_x_TS2, wpts_y_TS2, ...
+    - The unit of the waypoints: m
+
+  * Caution: 
+    - When you change the number of the ships whil you running the test in various situation:
+      (1) You must close and reopen the terminal you are using now. The ROS keeps the previous information of the ships so that if you run a new simulation with undefined ships, the simulation will use that undefined ones from the previous running.
+      (2) And you must comment in/out the node in the `/launch/inha_modules.launch`
+  
+  ---------------------------------------------------------------
+
+update_rate: 10  ## rospy.Rate(update_rate)
+mmg_dt: 1
+############################################
+
+########### 1852/110 ###########
+SD_param: 3
+cri_param: 500
+Portside_rule: True
+
+############################################
+
+weight_focusObs: 1
+weight_agressivness: 1
+timeHorizon: 300  # 350일때 상대거리 800 # 150일때 상대거리 약 13L
+filter_length : 10
+
+############################################
+
+min_targetSpeed : 0.95
+max_targetSpeed : 1.25
+num_targetSpeedCandidates : 3
+
+min_targetHeading_deg_local : -45.0
+max_targetHeading_deg_local: 45.0
+num_targetHeadingCandidates: 31
+
+Kp : 2.0
+Ki : 0.0
+Kd : 1.5
+
+ship1_index : 0
+ship2_index : 3
+ship3_index : 10
+
+############################################
+# kalman filter parameter
+window_size: 10
+ukf_dt: 1
+ukf_angle_dt: 1
+ais_delay: 1
+############################################
+# param for static_OB
+
+delta_t : 40
+detecting_radious : 100000
+detecting_distance : 99999
+space_number : 20
+
+# ==========================================+
+#             Original Conditions           |
+# ==========================================+
+shipInfo_all: 
+
+  ship1_info : {
+    ship_L : 163.55, ## 모형선의 길이 //향후 AIS data로 대체
+    ship_B : 27.4,
+    ship_scale : 70,
+    ship_ID : 1000, ## 자선의 ship ID 정의
+    ship_domain_radius : 44.0,  # original
+    target_speed : 7.0,  #[knots]
+    initial_start_x : 0.0,    # [m]
+    initial_start_y : 0.0,    # [m]
+    initial_start_U : 7.0,    # [knots] // 너무 작으면 발산함
+    initial_start_psi : 0,   # [deg]
+    include_inha_modules : True  # if) `True`라면 인하대 충돌회피 모듈이 작동함, // if `False`라면 인하대 충돌회피 모듈은 작동하지 않음!
+  }
+
+  ship2_info : {
+    ship_L : 163.55, ## 모형선의 길이 //향후 AIS data로 대체
+    ship_B : 27.4,
+    ship_scale : 70,
+    ship_ID : 2001, ## 자선의 ship ID 정의
+    ship_domain_radius : 44.0,  # original
+    target_speed : 7.0,  #[knots]
+    initial_start_x : 300.0,    # [m]
+    initial_start_y : 0.0,    # [m]
+    initial_start_U : 10.0,    # [knots] // 너무 작으면 발산함
+    initial_start_psi : 180,   # [deg]
+    include_inha_modules : False  # if) `True`라면 인하대 충돌회피 모듈이 작동함, // if `False`라면 인하대 충돌회피 모듈은 작동하지 않음!
+  }
+
+  # ship3_info : {
+  #   ship_L : 163.55, ## 모형선의 길이 //향후 AIS data로 대체
+  #   ship_B : 27.4,
+  #   ship_scale : 70,
+  #   ship_ID : 2002, ## 자선의 ship ID 정의
+  #   ship_domain_radius : 44.0,  # original
+  #   target_speed : 6.0,       #[knots]
+  #   initial_start_x : 300.0,    # [m]
+  #   initial_start_y : 0.0,    # [m]
+  #   initial_start_U : 10.0,    # [knots]  // 너무 작으면 발산함
+  #   initial_start_psi : 180,   # [deg]
+  #   include_inha_modules : False  # if) `True`라면 인하대 충돌회피 모듈이 작동함, // if `False`라면 인하대 충돌회피 모듈은 작동하지 않음!
+  # }
+
+  # ship4_info : {
+  #   ship_L : 163.55, ## 모형선의 길이 //향후 AIS data로 대체
+  #   ship_B : 27.4,
+  #   ship_scale : 70,
+  #   ship_ID : 2003, ## 자선의 ship ID 정의
+  #   ship_domain_radius : 44.0,  # original
+  #   target_speed : 6.0,       #[knots]
+  #   initial_start_x : 0.0,     # [m]
+  #   initial_start_y : -300.0,    # [m]
+  #   initial_start_U : 1.0,    # [knots]  // 너무 작으면 발산함
+  #   initial_start_psi : 90,   # [deg]
+  #   include_inha_modules : False  # if) `True`라면 인하대 충돌회피 모듈이 작동함, // if `False`라면 인하대 충돌회피 모듈은 작동하지 않음!
+  # }
+
+  # ship5_info : {
+  #   ship_L : 163.55, ## 모형선의 길이 //향후 AIS data로 대체
+  #   ship_B : 27.4,
+  #   ship_scale : 70,
+  #   ship_ID : 2004, ## 자선의 ship ID 정의
+  #   ship_domain_radius : 44.0, # original
+  #   ship_domain_radius : 6.0,
+  #   target_speed : 4.0,       #[knots]
+  #   initial_start_x : 300,    # [m]
+  #   initial_start_y : 250,    # [m]
+  #   initial_start_U : 1.0,    # [knots]  // 너무 작으면 발산함
+  #   initial_start_psi : 90,   # [deg]
+  #   include_inha_modules : False  # if) `True`라면 인하대 충돌회피 모듈이 작동함, // if `False`라면 인하대 충돌회피 모듈은 작동하지 않음!
+  # }
+
+waypoint_List: {
+  wpts_x_ship1: [
+    300.0, 0.0,
+  ],  
+  wpts_y_ship1: [
+    0.0, 0.0,
+  ],
+  wpts_x_ship2: [
+    150, 150
+    # 150.0,  200.0,  150.0,  100.0,  150.0,  100.0,  150.0,  200.0
+    # 500.0, 500.0, 500.0, 500.0, 500.0, 500.0, 
+    # 300, 0
+  ],
+  wpts_y_ship2: [
+    0, 150
+    # 0.0,    50,      0.0,    50,   0.0,    -50,   0.0,  -50
+    # 100.0, -100, 100.0, -100, 100.0, -100
+    # 0, 0
+  ],
+  # wpts_x_ship3: [
+  #   0, 300,
+  #   # 200.0,  150.0,  100.0,  150.0,  150.0,  150.0,  150.0,  150.0
+  #   # 330.0, 330.0, 330.0, 330.0, 330.0, 330.0, 
+  # ],
+  # wpts_y_ship3: [
+  #   0, 0, 
+  #   # 0.0,        0,  0.0,  0,      50.0, 0,      -50.0, 0
+  #   # 100.0, -100,100.0, -100,100.0, -100,
+  # ],
+  # wpts_x_ship4: [
+  #   0, 0.0,
+  # ],
+  # wpts_y_ship4: [
+  #   -300, 300,
+  # ],
+
+  # wpts_x_ship5: [
+  #   200, 300
+  # ],
+  # wpts_y_ship5: [
+  #   250, 250
+  # ],
+}
+
+target_spd_List: {
+  target_speed_ship1: [
+    1, 1,
+    ],
+
+  target_speed_ship2: [
+    1.0, 1.0
+    # 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 
+    # 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+    ],
+
+  # target_speed_ship3: [
+  #   1.0, 1.0
+  #   # 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+  #   # 1.0, 1.0,1.0, 1.0,1.0, 1.0,
+  #   ],
+
+  # target_speed_ship4: [
+  #   1.0, 1.0
+  #   ],
+
+  # target_speed_ship5: [
+  #   1.0, 1.0
+  #   ],
+}   

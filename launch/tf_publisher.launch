@@ -1,0 +1,7 @@
+<launch>
+
+ <node pkg="tf" type="static_transform_publisher" name="laser" args="2.0 2.0 0.0 0.0 0.0 0.0  /observer /ship_a  100"/>
+ <node pkg="tf" type="static_transform_publisher" name="laser" args="2.0 2.0 0.0 0.0 0.0 0.0  /base_link /laser_link  100"/>
+
+</launch>
+

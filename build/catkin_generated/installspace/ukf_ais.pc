@@ -1,0 +1,8 @@
+prefix=/usr/local
+
+Name: ukf_ais
+Description: Description of ukf_ais
+Version: 0.0.0
+Cflags: 
+Libs: -L${prefix}/lib 
+Requires: 

@@ -1,0 +1,6 @@
+<launch>
+    <node pkg="inha_modules"  type="data_visualizer.py" name="data_visualizer" respawn="true" output="screen"/> 
+    <node name="rviz" pkg="rviz" type="rviz" args="-d $(find inha_modules)/Disp/data_vis_inha.rviz"/>
+
+
+</launch>

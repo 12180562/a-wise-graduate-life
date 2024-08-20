@@ -1,0 +1,2 @@
+- setup-file:
+    local-name: /home/phlyoo/catkin_ws/src/ukf_ais/build/devel/setup.sh

@@ -90,7 +90,7 @@ class UKF:
         Kappa (κ):
         kappa는 보통 0 또는 3-n (여기서 n은 상태 변수의 차원)으로 설정됩니다. kappa는 시그마 포인트 생성시 중심 포인트의 가중치를 조정합니다.
         kappa를 조정함으로써 필터의 안정성과 정확성을 향상시킬 수 있습니다. 특히, kappa를 사용하여 비선형 시스템의 특성을 더 잘 반영할 수 있습니다.'''
-        sigma_points = MerweScaledSigmaPoints(n=4, alpha=0.1, beta=2., kappa=12)
+        sigma_points = MerweScaledSigmaPoints(n=4, alpha=0.1, beta=2., kappa=0)
         self.ukf = UnscentedKalmanFilter(dim_x=4, dim_z=4, dt=self.dt, fx=self.state_transition, hx=self.measurement_function, points=sigma_points)
         self.ukf.x = np.array([0., 0., 0., 0.])  # 초기 상태 추정치
         self.ukf.P = np.eye(4) * 10000.  # 초기 공분산 행렬

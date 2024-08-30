@@ -572,8 +572,8 @@ def main():
 
         rate.sleep()
         
-        print("Loop end time: ", time.time() - startTime)
-        print("================ Node 1 loop end ================\n")
+        # print("Loop end time: ", time.time() - startTime)
+        # print("================ Node 1 loop end ================\n")
 
     # file.close()
 

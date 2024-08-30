@@ -294,7 +294,7 @@ def main():
         ## <========= `/frm_info`를 통해 들어온 자선 타선의 데이터 전처리
         ship_list, ship_ID = inha.ship_list_container(OS_ID)
         OS_list, TS_list = inha.classify_OS_TS(ship_list, ship_ID, OS_ID)
-        print(ship_list)
+        # print(ship_list)
         # TS_ID = ship_ID[:]  ## 리스트 복사
         # TS_ID.remove(OS_ID)
 

@@ -216,9 +216,6 @@ class VO_module:
         self.time_horizon = rospy.get_param('timeHorizon')
         self.rule = rospy.get_param('Portside_rule')     
 
-        
-        
-        
     def __is_all_vels_collidable(self, vel_all_annotated, shipID_all):
         """
         If all the velocity candiates are in collision cone it returns `True`. Otherwise, it returns `False`.
@@ -383,7 +380,6 @@ class VO_module:
 
         return True
 
-    
     def __remove_annotation(self, vel_annotated_all):
         """
         It removes the annotations and takes only velocities from the dictionary of the set of velocities and annotations where the annotation is the indication of going left/right, in time horizon, and going into collision cone.

@@ -75,14 +75,14 @@ class UKF:
         Kappa (κ):
         kappa는 보통 0 또는 3-n (여기서 n은 상태 변수의 차원)으로 설정됩니다. kappa는 시그마 포인트 생성시 중심 포인트의 가중치를 조정합니다.
         kappa를 조정함으로써 필터의 안정성과 정확성을 향상시킬 수 있습니다. 특히, kappa를 사용하여 비선형 시스템의 특성을 더 잘 반영할 수 있습니다.'''
-        sigma_points = MerweScaledSigmaPoints(n=4, alpha=0.1, beta=2., kappa=12)
+        sigma_points = MerweScaledSigmaPoints(n=4, alpha=0.1, beta=2., kappa=0)
         self.ukf = UnscentedKalmanFilter(dim_x=4, dim_z=4, dt=self.dt, fx=self.state_transition, hx=self.measurement_function, points=sigma_points)
         self.ukf.x = np.array([0., 0., 0., 0.])  # 초기 상태 추정치
-        self.ukf.P = np.eye(4) * 10.  # 초기 공분산 행렬
+        self.ukf.P = np.eye(4) * 100.0  # 초기 공분산 행렬
         # self.ukf.P *= 10  # 초기 공분산 행렬
 
         self.ukf.R = np.eye(4) * 0.0  # 측정 노이즈
-        self.ukf.Q = np.eye(4) * 1000000.5  # 프로세스 노이즈
+        self.ukf.Q = np.eye(4) * 1000.  # 프로세스 노이즈
 
     def state_transition(self, x, dt):
         angle_dt = rospy.get_param('ukf_angle_dt')  # 각속도 조정 파라미터
@@ -99,13 +99,24 @@ class UKF:
         else:
             a = x[3]
 
-        x_new = np.zeros_like(x)
-        x_new[0] = x[0] 
-        x_new[1] = x[1]
-        x_new[2] = x[2]  # 속도는 변하지 않는다고 가정
-        # x_new[3] = a  # 방향은 변하지 않는다고 가정
-        x_new[3] = x[3]  # 방향은 변하지 않는다고 가정
-        return x_new
+        # x_new = np.zeros_like(x)
+        # x_new[0] = x[0] 
+        # x_new[1] = x[1]
+        # x_new[2] = x[2]  # 속도는 변하지 않는다고 가정
+        # # x_new[3] = a  # 방향은 변하지 않는다고 가정
+        # x_new[3] = x[3]  # 방향은 변하지 않는다고 가정
+
+        px, py, v, theta = x
+        # Update position using velocity and heading
+        px += v * np.cos(np.deg2rad(theta)) * dt
+        py += v * np.sin(np.deg2rad(theta)) * dt
+        # Return updated state
+        # x_new = [round(num,4) for num in x_new]
+        print("계산과정 : ", round(px,4), round(py,4), round(v,4), round(theta,4) )
+        # print("\n")
+        return np.array([px, py, v, theta])
+    
+        # return x_new
     
     def measurement_function(self, x):
         return x
@@ -126,9 +137,9 @@ class UKF:
 
             # 측정값이 변경되지 않았다면 predict만 수행
             self.ukf.predict()
-            self.ukf.update(measurement)
+            # self.ukf.update(self.ukf.x)
             self.predicted_values.append(self.ukf.x)
-
+            print("헤딩 안바뀜")
         else:
             # 측정값이 변경되었다면 예측 및 업데이트 수행
             if self.last_measurement is not None:
@@ -138,7 +149,7 @@ class UKF:
 
             self.ukf.predict()
             self.ukf.update(measurement)
-
+            print("헤딩 바뀜")
             self.predicted_values = []
 
         # Extract and log Kalman gain
@@ -205,6 +216,13 @@ def main():
             )
 
     while not rospy.is_shutdown():
+
+        if len(ukf.ship_ID) == 0:
+            ## 아직 초기값이 들어오지 않은 상태라면 return 시켜 버림 
+            print("========= Waiting for `/prediction` =========")
+            rate.sleep()
+            continue
+
         if first_loop:
             for shipName in shipsInfo.shipName_all:
                 shipID = shipState_all[shipName]['shipID']
@@ -225,6 +243,7 @@ def main():
                 shipState_after_predict[shipName] = {**{'shipID': shipID} , **shipInstance_all[shipName].moving_ships(Pre_heading, Pre_speed)}
             
             else:
+                print("인풋 : ", round(ukf.Pos_X[count2],4),round(ukf.Pos_Y[count2],4),round(ukf.Vel_U[count2],4),round(ukf.Heading[count2],4))
 
                 predicted_state = uncertain_ships[shipID].update_ukf(ukf.Pos_X[count2],
                                                                     ukf.Pos_Y[count2],
@@ -232,7 +251,10 @@ def main():
                                                                     ukf.Heading[count2],)
                 Pre_speed = predicted_state[2]
                 Pre_heading = predicted_state[3]
+                rounded_numbers = [round(num,4) for num in predicted_state]
 
+                print("결과 : ", rounded_numbers)
+                print("\n")
                 shipState_after_predict[shipName] = {**{'shipID': shipID} , **shipInstance_all[shipName].moving_ships(Pre_heading, Pre_speed)}
 
             count2 += 1

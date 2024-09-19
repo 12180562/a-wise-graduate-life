@@ -34,7 +34,7 @@ class KRISO:
         self.len_path_out_inha = len(WP.pathData)
 
         inha_dic = dict()
-        for i in range(self.len_path_out_inha):
+        for i in range(self.len_path_out_inha): 
             shipID = WP.pathData[i].nship_ID
             inha_dic[f'{shipID}'] = WP.pathData[i]
 

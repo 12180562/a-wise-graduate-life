@@ -21,8 +21,7 @@ import rospkg
 class data_inNout:
     """inha_module의 data 송신을 위해 필요한 함수들이 정의됨"""
     def __init__(self):
-        rospy.Subscriber('/frm_info', frm_info, self.OP_callback)
-        # rospy.Subscriber('/AIS_data', frm_info, self.OP_callback)  
+        rospy.Subscriber('/AIS_data', frm_info, self.OP_callback)  
         rospy.Subscriber('/waypoint_info', group_wpts_info, self.wp_callback)
         # rospy.Subscriber('/static_OB_info', static_OB_info, self.static_OB_callback)
         # rospy.Subscriber('/wpts_idx_os_kriso', wpt_idx_os, self.wp_idx_callback)
@@ -406,21 +405,28 @@ def main():
             distance = sqrt((OS_list["Pos_X"]-TS_list[ts_ID]["Pos_X"])**2+(OS_list["Pos_Y"]-TS_list[ts_ID]["Pos_Y"])**2)
 
             if distance <= rospy.get_param("detecting_distance"):
-                TS_list_copy[ts_ID] = TS_list[ts_ID]
-                TS_ID_copy.append(ts_ID)
-                encounter = True
-                encounterMMSI.append(ts_ID)
-        TS_ID = TS_ID_copy
+                if ts_ID not in TS_list_copy:
+                    TS_list_copy[ts_ID] = TS_list[ts_ID]
+                    encounterMMSI.append(ts_ID)
+                    # print(f"TS was detected at around OS: {ts_ID}")
+            else:
+                if ts_ID in TS_list_copy:
+                    del TS_list_copy[ts_ID]
+                    encounterMMSI.remove(ts_ID)
+                    # print(f"TS moved out of range: {ts_ID}")
+
+        TS_ID = encounterMMSI
         TS_list = TS_list_copy
 
 
         # print("distance : ", distance)
         # print("DCPA: ", temp_DCPA)
-        # print(TS_list)
+        # print(TS_ID)
         
-        if len(encounterMMSI) ==0 :
+        if len(encounterMMSI) == 0:
             encounter = False
-            encounterMMSI = []
+        else:
+            encounter = True
 
         # VO_operate = False
                 

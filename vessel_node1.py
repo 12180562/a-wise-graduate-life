@@ -408,12 +408,12 @@ def main():
                 if ts_ID not in TS_list_copy:
                     TS_list_copy[ts_ID] = TS_list[ts_ID]
                     encounterMMSI.append(ts_ID)
-                    # print(f"TS was detected at around OS: {ts_ID}")
+                    print(f"TS was detected at around OS: {ts_ID}")
             else:
                 if ts_ID in TS_list_copy:
                     del TS_list_copy[ts_ID]
                     encounterMMSI.remove(ts_ID)
-                    # print(f"TS moved out of range: {ts_ID}")
+                    print(f"TS moved out of range: {ts_ID}")
 
         TS_ID = encounterMMSI
         TS_list = TS_list_copy
@@ -421,13 +421,17 @@ def main():
 
         # print("distance : ", distance)
         # print("DCPA: ", temp_DCPA)
-        # print(TS_ID)
         
         if len(encounterMMSI) == 0:
             encounter = False
         else:
             encounter = True
 
+        print("TS_ID:           ", TS_ID)
+        # print("TS_list:         ", TS_list)
+        print("encounter:       ", encounter)
+        print("encounterMMSI:   ", encounterMMSI)
+        print("\n")
         # VO_operate = False
                 
         # for rd, enc, ub, dcpa, rc, cri in zip(TS_RD_temp, TS_ENC_temp, TS_UB_temp, TS_DCPA_temp, TS_RC_temp, TS_CRI_temp):

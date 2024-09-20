@@ -23,7 +23,7 @@ class CRI:
     def RD(self):
         '''Relative Distance, 자선과 타선 사이의 상대 거리'''
         result = sqrt(((self.Xt - self.Xo) ** 2) + ((self.Yt - self.Yo) ** 2)) + 0.0001
-        print(round(result,2))
+        # print(round(result,2))
         return result
 
     def TB(self):

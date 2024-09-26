@@ -179,22 +179,23 @@ Kp : 2.0
 Ki : 0.0
 Kd : 1.5
 
-ship1_index : 0
+ship1_index : 11
 ship2_index : 3
 ship3_index : 10
 
 ############################################
-# kalman filter parameter
-window_size: 10
+
 ukf_dt: 1
+ais_delay: 5
+
 ukf_angle_dt: 1
-ais_delay: 0.0000001
+
 ############################################
 # param for static_OB
 
 delta_t : 40
 detecting_radious : 100000
-detecting_distance : 100
+detecting_distance : 99999
 space_number : 20
 
 # ==========================================+
@@ -208,7 +209,7 @@ shipInfo_all:
     ship_scale : 70,
     ship_ID : 1000, ## 자선의 ship ID 정의
     ship_domain_radius : 44.0,  # original
-    target_speed : 7.0,  #[knots]
+    target_speed : 6.0,  #[knots]
     initial_start_x : 0.0,    # [m]
     initial_start_y : 0.0,    # [m]
     initial_start_U : 7.0,    # [knots] // 너무 작으면 발산함
@@ -222,56 +223,56 @@ shipInfo_all:
     ship_scale : 70,
     ship_ID : 2001, ## 자선의 ship ID 정의
     ship_domain_radius : 44.0,  # original
-    target_speed : 7.0,  #[knots]
+    target_speed : 6.0,  #[knots]
     initial_start_x : 300.0,    # [m]
     initial_start_y : 0.0,    # [m]
-    initial_start_U : 10.0,    # [knots] // 너무 작으면 발산함
+    initial_start_U : 7.0,    # [knots] // 너무 작으면 발산함
     initial_start_psi : 180,   # [deg]
     include_inha_modules : False  # if) `True`라면 인하대 충돌회피 모듈이 작동함, // if `False`라면 인하대 충돌회피 모듈은 작동하지 않음!
   }
 
-  ship3_info : {
-    ship_L : 163.55, ## 모형선의 길이 //향후 AIS data로 대체
-    ship_B : 27.4,
-    ship_scale : 70,
-    ship_ID : 2002, ## 자선의 ship ID 정의
-    ship_domain_radius : 44.0,  # original
-    target_speed : 6.0,       #[knots]
-    initial_start_x : 150.0,    # [m]
-    initial_start_y : 150.0,    # [m]
-    initial_start_U : 10.0,    # [knots]  // 너무 작으면 발산함
-    initial_start_psi : 270,   # [deg]
-    include_inha_modules : False  # if) `True`라면 인하대 충돌회피 모듈이 작동함, // if `False`라면 인하대 충돌회피 모듈은 작동하지 않음!
-  }
+  # ship3_info : {
+  #   ship_L : 163.55, ## 모형선의 길이 //향후 AIS data로 대체
+  #   ship_B : 27.4,
+  #   ship_scale : 70,
+  #   ship_ID : 2002, ## 자선의 ship ID 정의
+  #   ship_domain_radius : 44.0,  # original
+  #   target_speed : 6.0,       #[knots]
+  #   initial_start_x : 150.0,    # [m]
+  #   initial_start_y : 150.0,    # [m]
+  #   initial_start_U : 10.0,    # [knots]  // 너무 작으면 발산함
+  #   initial_start_psi : 270,   # [deg]
+  #   include_inha_modules : False  # if) `True`라면 인하대 충돌회피 모듈이 작동함, // if `False`라면 인하대 충돌회피 모듈은 작동하지 않음!
+  # }
 
-  ship4_info : {
-    ship_L : 163.55, ## 모형선의 길이 //향후 AIS data로 대체
-    ship_B : 27.4,
-    ship_scale : 70,
-    ship_ID : 2003, ## 자선의 ship ID 정의
-    ship_domain_radius : 44.0,  # original
-    target_speed : 6.0,       #[knots]
-    initial_start_x : 0.0,     # [m]
-    initial_start_y : -300.0,    # [m]
-    initial_start_U : 1.0,    # [knots]  // 너무 작으면 발산함
-    initial_start_psi : 90,   # [deg]
-    include_inha_modules : False  # if) `True`라면 인하대 충돌회피 모듈이 작동함, // if `False`라면 인하대 충돌회피 모듈은 작동하지 않음!
-  }
+  # ship4_info : {
+  #   ship_L : 163.55, ## 모형선의 길이 //향후 AIS data로 대체
+  #   ship_B : 27.4,
+  #   ship_scale : 70,
+  #   ship_ID : 2003, ## 자선의 ship ID 정의
+  #   ship_domain_radius : 44.0,  # original
+  #   target_speed : 6.0,       #[knots]
+  #   initial_start_x : 0.0,     # [m]
+  #   initial_start_y : -300.0,    # [m]
+  #   initial_start_U : 1.0,    # [knots]  // 너무 작으면 발산함
+  #   initial_start_psi : 90,   # [deg]
+  #   include_inha_modules : False  # if) `True`라면 인하대 충돌회피 모듈이 작동함, // if `False`라면 인하대 충돌회피 모듈은 작동하지 않음!
+  # }
 
-  ship5_info : {
-    ship_L : 163.55, ## 모형선의 길이 //향후 AIS data로 대체
-    ship_B : 27.4,
-    ship_scale : 70,
-    ship_ID : 2004, ## 자선의 ship ID 정의
-    ship_domain_radius : 44.0, # original
-    ship_domain_radius : 6.0,
-    target_speed : 4.0,       #[knots]
-    initial_start_x : 300,    # [m]
-    initial_start_y : 250,    # [m]
-    initial_start_U : 1.0,    # [knots]  // 너무 작으면 발산함
-    initial_start_psi : 90,   # [deg]
-    include_inha_modules : False  # if) `True`라면 인하대 충돌회피 모듈이 작동함, // if `False`라면 인하대 충돌회피 모듈은 작동하지 않음!
-  }
+  # ship5_info : {
+  #   ship_L : 163.55, ## 모형선의 길이 //향후 AIS data로 대체
+  #   ship_B : 27.4,
+  #   ship_scale : 70,
+  #   ship_ID : 2004, ## 자선의 ship ID 정의
+  #   ship_domain_radius : 44.0, # original
+  #   ship_domain_radius : 6.0,
+  #   target_speed : 4.0,       #[knots]
+  #   initial_start_x : 300,    # [m]
+  #   initial_start_y : 250,    # [m]
+  #   initial_start_U : 1.0,    # [knots]  // 너무 작으면 발산함
+  #   initial_start_psi : 90,   # [deg]
+  #   include_inha_modules : False  # if) `True`라면 인하대 충돌회피 모듈이 작동함, // if `False`라면 인하대 충돌회피 모듈은 작동하지 않음!
+  # }
 
 waypoint_List: {
   wpts_x_ship1: [
@@ -292,34 +293,34 @@ waypoint_List: {
     # 100.0, -100, 100.0, -100, 100.0, -100
     0, 0
   ],
-  wpts_x_ship3: [
-    150, 150,
-    # 200.0,  150.0,  100.0,  150.0,  150.0,  150.0,  150.0,  150.0
-    # 330.0, 330.0, 330.0, 330.0, 330.0, 330.0, 
-  ],
-  wpts_y_ship3: [
-    -150, 150, 
-    # 0.0,        0,  0.0,  0,      50.0, 0,      -50.0, 0
-    # 100.0, -100,100.0, -100,100.0, -100,
-  ],
-  wpts_x_ship4: [
-    100, 100.0,
-  ],
-  wpts_y_ship4: [
-    -150, 150,
-  ],
+  # wpts_x_ship3: [
+  #   150, 150,
+  #   # 200.0,  150.0,  100.0,  150.0,  150.0,  150.0,  150.0,  150.0
+  #   # 330.0, 330.0, 330.0, 330.0, 330.0, 330.0, 
+  # ],
+  # wpts_y_ship3: [
+  #   -150, 150, 
+  #   # 0.0,        0,  0.0,  0,      50.0, 0,      -50.0, 0
+  #   # 100.0, -100,100.0, -100,100.0, -100,
+  # ],
+  # wpts_x_ship4: [
+  #   100, 100.0,
+  # ],
+  # wpts_y_ship4: [
+  #   -150, 150,
+  # ],
 
-  wpts_x_ship5: [
-    200, 300
-  ],
-  wpts_y_ship5: [
-    150, 150
-  ],
+  # wpts_x_ship5: [
+  #   200, 300
+  # ],
+  # wpts_y_ship5: [
+  #   150, 150
+  # ],
 }
 
 target_spd_List: {
   target_speed_ship1: [
-    1, 1,
+    1.0, 1.0,
     ],
 
   target_speed_ship2: [
@@ -328,17 +329,17 @@ target_spd_List: {
     # 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
     ],
 
-  target_speed_ship3: [
-    1.0, 1.0
-    # 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
-    # 1.0, 1.0,1.0, 1.0,1.0, 1.0,
-    ],
+  # target_speed_ship3: [
+  #   1.0, 1.0
+  #   # 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+  #   # 1.0, 1.0,1.0, 1.0,1.0, 1.0,
+  #   ],
 
-  target_speed_ship4: [
-    1.0, 1.0
-    ],
+  # target_speed_ship4: [
+  #   1.0, 1.0
+  #   ],
 
-  target_speed_ship5: [
-    1.0, 1.0
-    ],
+  # target_speed_ship5: [
+  #   1.0, 1.0
+  #   ],
 }   

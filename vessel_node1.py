@@ -1,9 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
+
 import sys, os
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 from functions.Inha_VelocityObstacle import VO_module
 from functions.Inha_DataProcess import Inha_dataProcess
+from functions.Ais_ukf import UKF
 
 from udp_col_msg.msg import col, vis_info, cri_info, VO_info, static_OB_info
 from udp_msgs.msg import frm_info, group_wpts_info, wpt_idx_os, group_boundary_info
@@ -18,10 +20,12 @@ import rospy
 import time
 import rospkg
 
+import copy
+
 class data_inNout:
     """inha_module의 data 송신을 위해 필요한 함수들이 정의됨"""
     def __init__(self):
-        rospy.Subscriber('/AIS_data', frm_info, self.OP_callback)  
+        rospy.Subscriber('/frm_info', frm_info, self.OP_callback)
         rospy.Subscriber('/waypoint_info', group_wpts_info, self.wp_callback)
         # rospy.Subscriber('/static_OB_info', static_OB_info, self.static_OB_callback)
         # rospy.Subscriber('/wpts_idx_os_kriso', wpt_idx_os, self.wp_idx_callback)
@@ -58,6 +62,10 @@ class data_inNout:
 
         self.target_heading_list = []
 
+        self.start_time = time.time()
+        self.ais_delay = rospy.get_param("ais_delay")
+
+    
     def wp_callback(self, wp):
         ''' subscribe `/waypoint_info`
 
@@ -99,7 +107,6 @@ class data_inNout:
 
         raw_psi = np.asanyarray(operation.m_fltHeading)
         self.Heading = raw_psi % 360
-
 
         ############################ for connect with KRISO format ##################################
 
@@ -170,7 +177,6 @@ class data_inNout:
         inha.targetCourse = round(pub_list[11], 3)
         
         self.WP_pub.publish(inha)
-
 
     def vis_out(self, pub_list):
         vis = vis_info()
@@ -254,6 +260,27 @@ def main():
     encounter = None
     encounterMMSI = []
 
+# UKF part
+#####################################################################################################################
+    
+    ukf_dt = rospy.get_param('ukf_dt')
+
+    last_publish_time = rospy.Time.now()  # 마지막으로 발행한 시간을 초기화
+    delay = rospy.get_param('ais_delay')
+    publish_interval = rospy.Duration(delay)  # 발행 주기를 5초로 설정
+    
+    ukf_instance = {}    
+    TS_list_d={}
+    TS_list={}
+    predicted_state = []
+    previous_input_list = {}
+
+    first_loop = True
+    first_publish = True
+    heading_diff = 0.0
+
+#####################################################################################################################
+
     while not rospy.is_shutdown():
         current_time = rospy.Time.now()  # 현재 시간을 계속 추적
         Local_PP = VO_module()
@@ -271,8 +298,6 @@ def main():
             print("========= Waiting for `/waypoint_info` topic subscription in {} =========".format(node_Name))
             rate.sleep()
             continue
-
-        startTime = time.time()
 
         inha = Inha_dataProcess(
             data.ship_ID,
@@ -292,13 +317,75 @@ def main():
         # Local_goal = [wpts_x_os[int(data.waypoint_idx)], wpts_y_os[int(data.waypoint_idx)]]          # 부경대
         ## <========= `/frm_info`를 통해 들어온 자선 타선의 데이터 전처리
         ship_list, ship_ID = inha.ship_list_container(OS_ID)
-        OS_list, TS_list = inha.classify_OS_TS(ship_list, ship_ID, OS_ID)
-        # print(ship_list)
-        # TS_ID = ship_ID[:]  ## 리스트 복사
-        # TS_ID.remove(OS_ID)
-
-        TS_ID = TS_list.keys()
+        OS_list, TS_list_ori = inha.classify_OS_TS(ship_list, ship_ID, OS_ID)
+        TS_ID = TS_list_ori.keys()
         # TODO : why do this?
+
+# UKF part
+#####################################################################################################################
+        
+        print("TS_list_ori: ", TS_list_ori)
+        if first_loop:
+            for ts_ID in TS_ID:
+                ukf_instance[ts_ID] = UKF()
+
+            first_loop = False
+
+        for ts_ID in TS_ID:
+            # 해딩 바뀔때 업데이트 하는 코드 넣어야함 타선 여러척일때 충돌 날까봐 안넣음
+            if(current_time - last_publish_time >= publish_interval) or first_publish:
+                TS_list_d[ts_ID] = TS_list_ori[ts_ID]
+                last_publish_time = current_time
+
+            heading_diff = TS_list_d[ts_ID]['Heading'] - TS_list_ori[ts_ID]['Heading']
+
+            if heading_diff < 0:
+                heading_diff += 360
+            elif heading_diff >= 360:
+                heading_diff -= 360
+
+            if abs(heading_diff) >= 15:
+                TS_list_d[ts_ID] = TS_list_ori[ts_ID]
+
+            else:
+                TS_list_d[ts_ID] = TS_list_d[ts_ID]
+
+        first_publish = False
+        print("delay: ",TS_list_d)
+
+        input_list = []
+        TS_list = copy.deepcopy(TS_list_d)
+        for ts_ID in TS_ID:
+            input_list.append(TS_list_d[ts_ID]['Pos_X'])
+            input_list.append(TS_list_d[ts_ID]['Pos_Y'])
+            input_list.append(TS_list_d[ts_ID]['Vel_U'])
+            input_list.append(TS_list_d[ts_ID]['Heading'])
+
+            if ts_ID in previous_input_list and previous_input_list[ts_ID] == input_list:
+                predicted_state, covariance = ukf_instance[ts_ID].predict(ukf_dt)
+
+            else:
+                predicted_state, covariance= ukf_instance[ts_ID].update(input_list, ukf_dt)
+
+            previous_input_list[ts_ID] = input_list.copy()
+
+            update_keys = ['Pos_X', 'Pos_Y', 'Vel_U', 'Heading']
+
+            for key, value in zip(update_keys, predicted_state):
+                if key in TS_list[ts_ID]:
+                    TS_list[ts_ID][key] = value
+
+        for ts_ID in TS_ID:
+            X_diff = TS_list[ts_ID]["Pos_X"] - TS_list_ori[ts_ID]["Pos_X"]
+            Y_diff = TS_list[ts_ID]["Pos_Y"] - TS_list_ori[ts_ID]["Pos_Y"]
+            U_diff = TS_list[ts_ID]["Vel_U"] - TS_list_ori[ts_ID]["Vel_U"]
+            H_diff = TS_list[ts_ID]["Heading"] - TS_list_ori[ts_ID]["Heading"]
+        
+        print("predict: ",TS_list)
+        print("\n")
+        print(X_diff)
+
+#####################################################################################################################
 
         OS_Vx, OS_Vy = inha.U_to_vector_V(OS_list['Vel_U'], OS_list['Heading'])
 
@@ -350,7 +437,6 @@ def main():
 
         encounterMMSI = []
         TS_list_copy = {}
-        TS_ID_copy = []
 
         for ts_ID in TS_ID:
             temp_RD = TS_list[ts_ID]['RD']
@@ -418,7 +504,6 @@ def main():
         TS_ID = encounterMMSI
         TS_list = TS_list_copy
 
-
         # print("distance : ", distance)
         # print("DCPA: ", temp_DCPA)
         
@@ -427,44 +512,9 @@ def main():
         else:
             encounter = True
 
-        print("TS_ID:           ", TS_ID)
-        # print("TS_list:         ", TS_list)
-        print("encounter:       ", encounter)
-        print("encounterMMSI:   ", encounterMMSI)
-        print("\n")
-        # VO_operate = False
-                
-        # for rd, enc, ub, dcpa, rc, cri in zip(TS_RD_temp, TS_ENC_temp, TS_UB_temp, TS_DCPA_temp, TS_RC_temp, TS_CRI_temp):
-        #     VO_operate_list = []
-        #     if cri > 0.579:
-        #         VO_operate = True
-        #         VO_operate_list.append(VO_operate)
-        #         # print(VO_operate_list)
-             
-        #     # if rd < 48.8:   
-        #     if rd < 34.5:
-        #         VO_operate = True
-        #         VO_operate_list.append(VO_operate)
-        #         # print(VO_operate_list)
-        #         # print("RD 규칙 적용")
-                
-        #     # if dcpa < 140:    
-        #     if dcpa <= 60.31:
-        #         VO_operate = True
-        #         # print(VO_operate)
-        #     if enc== "safe":
-        #         VO_operate = False
-                # print("ENC 규칙 적용")
-
-        # NOTE: `VO_update()` takes the majority of the computation time
-        # TODO: Reduce the computation time of `VO_update()`
-        # V_opt, VO_BA_all = Local_PP.VO_update(OS_list, TS_list_sort, static_OB, V_des, v_min)
-
-        ############################ for connect with KRISO format ##################################
-
-        # data.static_obstacle_info = data.static_available_info + data.static_unavailable_info
-
-        ############################ for connect with KRISO format ##################################
+        # print("TS_ID:           ", TS_ID)
+        # print("encounter:       ", encounter)
+        # print("encounterMMSI:   ", encounterMMSI)
 
         V_selected, pub_collision_cone = Local_PP.VO_update(
             OS_list, 
@@ -532,8 +582,6 @@ def main():
             else:
                 real_target_heading = sum_of_heading/len(data.target_heading_list)
 
-        
-
         # # < =========  인하대 모듈에서 나온 데이터를 최종적으로 송신하는 부분
         # OS_pub_list = [int(OS_ID), False, waypointIndex, [wp_x], [wp_y],desired_spd, eta, eda, 0.5, 0.0, False, [], desired_spd, desired_heading, isNeedCA, ""]
         OS_pub_list = [
@@ -584,46 +632,45 @@ def main():
 
         ship_dic2list = list(OS_list.values())
 
+        # savedata_list = [
+        #     TS_RD_temp,
+        #     TS_RC_temp,
+        #     TS_K_temp,
+        #     TS_DCPA_temp,
+        #     TS_TCPA_temp,
+        #     TS_UDCPA_temp,
+        #     TS_UTCPA_temp,
+        #     TS_UD_temp,
+        #     TS_UB_temp,
+        #     TS_UK_temp,
+        #     TS_CRI_temp,
+        #     TS_Rf_temp,
+        #     TS_Ra_temp,
+        #     TS_Rs_temp,
+        #     TS_Rp_temp,
+        #     TS_ENC_temp,
+        #     V_selected,
+        #     pub_collision_cone,
+        #     VO_operate
+        # ]
+
         savedata_list = [
-            TS_RD_temp,
-            TS_RC_temp,
-            TS_K_temp,
-            TS_DCPA_temp,
-            TS_TCPA_temp,
-            TS_UDCPA_temp,
-            TS_UTCPA_temp,
-            TS_UD_temp,
-            TS_UB_temp,
-            TS_UK_temp,
-            TS_CRI_temp,
-            TS_Rf_temp,
-            TS_Ra_temp,
-            TS_Rs_temp,
-            TS_Rp_temp,
-            TS_ENC_temp,
-            V_selected,
-            pub_collision_cone,
-            VO_operate
+            int(OS_ID),
+            ship_dic2list[1],
+            ship_dic2list[2],
+            wp_x,
+            wp_y,
+            ship_dic2list[3],
+            OS_Vx,
+            OS_Vy,
+            ship_dic2list[4],
+            desired_heading,
+            encounter,
+            encounterMMSI
         ]
 
-        # savedata_list = [
-        #     int(OS_ID),
-        #     ship_dic2list[1],
-        #     ship_dic2list[2],
-        #     wp_x,
-        #     wp_y,
-        #     ship_dic2list[3],
-        #     OS_Vx,
-        #     OS_Vy,
-        #     ship_dic2list[4],
-        #     desired_heading,
-        #     encounter,
-        #     encounterMMSI
-        # ]
-        # print(f"encounter: ", encounter)
-        # print(f"encounterMMSI: ",encounterMMSI)
 
-        # writer.writerow(savedata_list)
+        writer.writerow(savedata_list)
 
         data.path_out_publish(OS_pub_list)
         data.vis_out(vis_pub_list)

@@ -4,15 +4,15 @@
     <node pkg="ukf_ais"  type="KRISO.py"  name="KRISO" respawn="true" />
     <node pkg="ukf_ais"  type="PKNU.py" name="PKNU" respawn="true" /> 
     <!-- <node pkg="ukf_ais"  type="ship_predict.py" name="ship_predict" respawn="true" output="screen" /> -->
-    <node pkg="ukf_ais"  type="heading_predict.py" name="heading_predict" respawn="true"/> 
+    <!-- <node pkg="ukf_ais"  type="heading_predict.py" name="heading_predict" respawn="true"/>  -->
 
     <!-- Comment out the unused vessel nodes -->
     <!-- Define the vessels' initial condition at the `/params/main_parameter.yaml` -->
     <node pkg="ukf_ais"  type="vessel_node1.py"  name="ship1_Node"  respawn="true" output="screen"/>
     <node pkg="ukf_ais"  type="vessel_node2.py"  name="ship2_Node"  respawn="true" output="screen"/>
-    <node pkg="ukf_ais"  type="vessel_node3.py"  name="ship3_Node"  respawn="true" />
-    <node pkg="ukf_ais"  type="vessel_node4.py"  name="ship4_Node"  respawn="true" /> 
-    <node pkg="ukf_ais"  type="vessel_node5.py"  name="ship5_Node"  respawn="true" />
+    <!-- <node pkg="ukf_ais"  type="vessel_node3.py"  name="ship3_Node"  respawn="true" /> -->
+    <!-- <node pkg="ukf_ais"  type="vessel_node4.py"  name="ship4_Node"  respawn="true" />  -->
+    <!-- <node pkg="ukf_ais"  type="vessel_node5.py"  name="ship5_Node"  respawn="true" /> -->
 
     <node pkg="ukf_ais"  type="data_integration.py"  name="data_integration"  respawn="true"  output="screen"/>
 

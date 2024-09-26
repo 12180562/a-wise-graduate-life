@@ -1838,9 +1838,9 @@ class VO_module:
                 if TS[ts_ID]['mapped_radius'] > LOSdist:
                     LOSdist = TS[ts_ID]['mapped_radius']
                 
-                boundLineAngle_left_rad_global = LOSangle_rad + atan2(TS[ts_ID]['mapped_radius'],LOSdist) #TS[ts_ID]['mapped_radius']/
+                boundLineAngle_left_rad_global = LOSangle_rad + atan2(30,LOSdist) #TS[ts_ID]['mapped_radius']/
                 # boundLineAngle_left_rad_global = TS[ts_ID]['left_boundary'] 
-                boundLineAngle_right_rad_global = LOSangle_rad - atan2(TS[ts_ID]['mapped_radius'],LOSdist) #TS[ts_ID]['mapped_radius']/
+                boundLineAngle_right_rad_global = LOSangle_rad - atan2(30,LOSdist) #TS[ts_ID]['mapped_radius']/
                 # boundLineAngle_right_rad_global = TS[ts_ID]['right_boundary']
                 
                 collisionConeTranslated = (1 - self.weight_alpha) * vA + self.weight_alpha * vB

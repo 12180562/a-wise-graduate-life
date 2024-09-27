@@ -7,9 +7,9 @@ from functions.Inha_VelocityObstacle import VO_module
 from functions.Inha_DataProcess import Inha_dataProcess
 from functions.Ais_ukf import UKF
 
-from udp_col_msg.msg import col, vis_info, cri_info, VO_info, static_OB_info
-from udp_msgs.msg import frm_info, group_wpts_info, wpt_idx_os, group_boundary_info
-# from ctrl_msgs.msg import ctrl_output_pknu
+from udp_col_msg.msg import col, vis_info, cri_info, VO_info
+from udp_msgs.msg import frm_info, group_wpts_info
+from ukf_ais.msg import ShipInfo
 
 from math import sqrt, atan2
 from numpy import rad2deg
@@ -23,40 +23,27 @@ import rospkg
 import copy
 
 class data_inNout:
-    """inha_module의 data 송신을 위해 필요한 함수들이 정의됨"""
     def __init__(self):
         rospy.Subscriber('/frm_info', frm_info, self.OP_callback)
         rospy.Subscriber('/waypoint_info', group_wpts_info, self.wp_callback)
-        # rospy.Subscriber('/static_OB_info', static_OB_info, self.static_OB_callback)
-        # rospy.Subscriber('/wpts_idx_os_kriso', wpt_idx_os, self.wp_idx_callback)
-        # rospy.Subscriber('/ctrl_info_pknu', ctrl_output_pknu, self.wp_idx_callback)
-
-        ############################ for connect with KRISO format ##################################
-
-        # rospy.Subscriber('/Unavailiable_Area_info', group_boundary_info, self.static_unavailable_callback)
-        # rospy.Subscriber('/Availiable_Area_info', group_boundary_info, self.static_available_callback)
-
-        ############################ for connect with KRISO format ##################################
 
         self.WP_pub = rospy.Publisher('/vessel1_info', col, queue_size=0)
         self.cri_pub = rospy.Publisher('/cri1_info', cri_info, queue_size=10)
         self.VO_pub = rospy.Publisher('/VO1_info', VO_info, queue_size=10)
         self.Vis_pub = rospy.Publisher('/vis1_info', vis_info, queue_size=10)
+
+        self.ori_pub = rospy.Publisher('TS_list_ori', ShipInfo, queue_size=10)
+        self.del_pub = rospy.Publisher('TS_list_d', ShipInfo, queue_size=10)
+        self.pre_pub = rospy.Publisher('TS_list_predict', ShipInfo, queue_size=10)
+
         self.ship_ID = []
         self.waypoint_idx = 0
         self.len_waypoint_info = 0
         self.waypoint_dict = dict()
         self.ts_spd_dict = dict()
-        # self.ship1_index = rospy.get_param('ship1_index')
-        # self.index = rospy.get_param('index')
 
         self.TS_WP_index = []
-        ############################ for connect with KRISO format ##################################
 
-        # self.static_unavailable_info =[]
-        # self.static_available_info =[]
-
-        ############################ for connect with KRISO format ##################################
         self.static_obstacle_info = []
         self.static_point_info = []
 
@@ -65,38 +52,16 @@ class data_inNout:
         self.start_time = time.time()
         self.ais_delay = rospy.get_param("ais_delay")
 
-    
     def wp_callback(self, wp):
-        ''' subscribe `/waypoint_info`
-
-        Example:
-            OS_wpts_x = self.waypoint_dict['2000'].wpts_x
-        '''
         self.len_waypoint_info = len(wp.group_wpts_info)
         wp_dic = dict()
         for i in range(self.len_waypoint_info):
             shipID = wp.group_wpts_info[i].shipID
             wp_dic['{}'.format(shipID)] = wp.group_wpts_info[i]
-            ## 위 처럼 표현할 경우, dictionary 안의 message 변수명을 알고 있어야 호출이 가능함!
-            ## 따라서, 새로운 임의의 key Value로 바꾸서 저장하고 싶다면 아래와 같이 새로운 dictionary를 만들어도 됨. (이중 dictionary 구조)
-            # wp_dic2 = dict()
-            # wp_dic2['waypoint_x'] = wp.group_wpts_info[i].wpts_x
-            # wp_dic2['waypoint_y'] = wp.group_wpts_info[i].wpts_y
-            
-            # wp_dic[f'{shipID}'] = wp_dic2
 
         self.waypoint_dict = wp_dic
-        
 
     def OP_callback(self, operation):
-        ''' subscribe `/frm_info` 
-        
-        params : 
-            `frm_info` 변수명은 입출력관계도 KRISO 참조
-
-        Note :
-            `psi`값이 [-2pi, 2pi]값으로 들어오므로, 편의상 강제로 [0, 2pi]로 변경
-        '''
         self.ship_ID = list(operation.m_nShipID)
 
         self.Pos_X  = operation.m_fltPos_X
@@ -107,8 +72,6 @@ class data_inNout:
 
         raw_psi = np.asanyarray(operation.m_fltHeading)
         self.Heading = raw_psi % 360
-
-        ############################ for connect with KRISO format ##################################
 
     def static_unavailable_callback(self, static_OB):
         self.len_static_obstacle_info = len(static_OB.group_boundary_info)
@@ -154,14 +117,7 @@ class data_inNout:
                     
         self.static_available_info = static_ob_info
 
-        ############################ for connect with KRISO format ##################################
-
     def path_out_publish(self, pub_list):
-        ''' publish `/path_out_inha`
-        
-        Note :
-            pub_list = [m_nShipID, isUpdateWP, numWP, WP_x[], WP_y[], speedWP, ETA_WP, EDA_WP, RI, CRI, isError, errors, desiredU, desiredHeading, isNeedCA, "Encounter status"]
-        '''
         inha = col()
         inha.nship_ID = pub_list[0]
         inha.modifyWayPoint = pub_list[1]
@@ -213,8 +169,40 @@ class data_inNout:
 
         self.VO_pub.publish(vo)
 
+    def ori_out(self, pub_list):
+        for ship_ID, ship_data in pub_list.items():
+            message = ShipInfo()
+            message.Ship_ID = ship_data['Ship_ID']
+            message.Pos_X = ship_data['Pos_X']
+            message.Pos_Y = ship_data['Pos_Y']
+            message.Vel_U = ship_data['Vel_U']
+            message.Heading = ship_data['Heading']
+
+            self.ori_pub.publish(message)
+
+    def del_out(self, pub_list):
+        for ship_ID, ship_data in pub_list.items():
+            message = ShipInfo()
+            message.Ship_ID = ship_data['Ship_ID']
+            message.Pos_X = ship_data['Pos_X']
+            message.Pos_Y = ship_data['Pos_Y']
+            message.Vel_U = ship_data['Vel_U']
+            message.Heading = ship_data['Heading']
+
+            self.del_pub.publish(message)
+
+    def pre_out(self, pub_list):
+        for ship_ID, ship_data in pub_list.items():
+            message = ShipInfo()
+            message.Ship_ID = ship_data['Ship_ID']
+            message.Pos_X = ship_data['Pos_X']
+            message.Pos_Y = ship_data['Pos_Y']
+            message.Vel_U = ship_data['Vel_U']
+            message.Heading = ship_data['Heading']
+
+            self.pre_pub.publish(message)
+
 def main():  
-    # get an instance of RosPack with the default search paths
     rospack = rospkg.RosPack()  
     package_path = rospack.get_path('kass_inha')
     VO_operate = rospy.get_param("shipInfo_all/ship1_info/include_inha_modules")
@@ -245,12 +233,8 @@ def main():
     # 자선의 정보
     OS_scale = rospy.get_param("shipInfo_all/ship1_info/ship_scale")
     target_speed = rospy.get_param("shipInfo_all/ship1_info/target_speed")  * 0.5144 / sqrt(OS_scale)
-    ship_L = rospy.get_param("shipInfo_all/ship1_info/ship_L") ## 향후 이부분은, 1) ship domain과 2) AIS data의 선박의 길이 부분으로 나누어 고려 및 받아야 함!
+    ship_L = rospy.get_param("shipInfo_all/ship1_info/ship_L")
     
-    # # !----- 설문조사에서는 충돌회피 시점은 12m 어선 기준으로 일반적으론 HO 3nm/ CS & OT 2nm을 기준으로 하고 있으며, 최소 안전 이격거리는 0.5~ 1nm으로 조사됨
-    # # 다만, 2m급 모형선 테스트에서는 협소한 부분이 있으므로 스케일 다운(1/200)을 시켜서, "회피시점: 0.0015nm(27.78m) / 최소 안전 이격거리는 9.26m"가 되게끔 할 예정
-    # # 참고 논문: https://www.koreascience.or.kr/article/JAKO201427542599696.pdf 
-
     data = data_inNout()
     
     t = 0
@@ -284,17 +268,13 @@ def main():
     while not rospy.is_shutdown():
         current_time = rospy.Time.now()  # 현재 시간을 계속 추적
         Local_PP = VO_module()
-        # Local_PP2 = VO_module2()
-        # data.static_obstacle_info = data.static_unavailable_info + data.static_available_info
-        
+
         if len(data.ship_ID) == 0:
-            ## 아직 초기값이 들어오지 않은 상태라면 return 시켜 버림 
             print("========= Waiting for `/frm_info` topic subscription in {}=========".format(node_Name))
             rate.sleep()
             continue
 
         if data.len_waypoint_info == 0:
-            ## 아직 초기값이 들어오지 않은 상태라면 return 시켜 버림 
             print("========= Waiting for `/waypoint_info` topic subscription in {} =========".format(node_Name))
             rate.sleep()
             continue
@@ -306,16 +286,12 @@ def main():
             data.Vel_U, 
             data.Heading, 
             data.waypoint_dict
-            )                       # inha_module의 data 송신을 위해 필요한 함수들이 정의됨
+            )
 
-        ## <======== 서울대학교 전역경로를 위한 waypoint 수신 및 Local path의 goal로 처리
         wpts_x_os = list(data.waypoint_dict['{}'.format(OS_ID)].wpts_x)
         wpts_y_os = list(data.waypoint_dict['{}'.format(OS_ID)].wpts_y)
         Local_goal = [wpts_x_os[waypointIndex], wpts_y_os[waypointIndex]]
 
-        # Local_goal = [wpts_x_os[data.waypoint_idx], wpts_y_os[data.waypoint_idx]]          # kriso
-        # Local_goal = [wpts_x_os[int(data.waypoint_idx)], wpts_y_os[int(data.waypoint_idx)]]          # 부경대
-        ## <========= `/frm_info`를 통해 들어온 자선 타선의 데이터 전처리
         ship_list, ship_ID = inha.ship_list_container(OS_ID)
         OS_list, TS_list_ori = inha.classify_OS_TS(ship_list, ship_ID, OS_ID)
         TS_ID = TS_list_ori.keys()
@@ -332,7 +308,6 @@ def main():
             first_loop = False
 
         for ts_ID in TS_ID:
-            # 해딩 바뀔때 업데이트 하는 코드 넣어야함 타선 여러척일때 충돌 날까봐 안넣음
             if(current_time - last_publish_time >= publish_interval) or first_publish:
                 TS_list_d[ts_ID] = TS_list_ori[ts_ID]
                 last_publish_time = current_time
@@ -383,7 +358,7 @@ def main():
         
         print("predict: ",TS_list)
         print("\n")
-        print(X_diff)
+        print(U_diff)
 
 #####################################################################################################################
 
@@ -394,24 +369,7 @@ def main():
 
         _, local_goal_EDA = inha.eta_eda_assumption(Local_goal, OS_list, target_speed)
 
-        # <=========== VO 기반 충돌회피를 위한 경로 생성
-        # !--- 1) `Local goal`으로 향하기 위한 속도벡터 계산
         V_des = Local_PP.vectorV_to_goal(OS_list, Local_goal, target_speed)
-
-        '''
-            NOTE: 
-                `OS_list` and `TS_list`:
-                    {
-                        'Ship_ID': [], 
-                        'Pos_X' : [],  
-                        'Pos_Y' : [],   
-                        'Vel_U' : [],   
-                        'Heading_deg' : [], 
-                        'V_x' : [], 
-                        'V_y' : [], 
-                        'radius' : []
-                    }
-        '''
 
         TS_list = inha.TS_info_supplement(
             OS_list, 
@@ -494,12 +452,12 @@ def main():
                 if ts_ID not in TS_list_copy:
                     TS_list_copy[ts_ID] = TS_list[ts_ID]
                     encounterMMSI.append(ts_ID)
-                    print(f"TS was detected at around OS: {ts_ID}")
+                    # print(f"TS was detected at around OS: {ts_ID}")
             else:
                 if ts_ID in TS_list_copy:
                     del TS_list_copy[ts_ID]
                     encounterMMSI.remove(ts_ID)
-                    print(f"TS moved out of range: {ts_ID}")
+                    # print(f"TS moved out of range: {ts_ID}")
 
         TS_ID = encounterMMSI
         TS_list = TS_list_copy
@@ -523,21 +481,10 @@ def main():
             data.static_obstacle_info,
             data.static_point_info
             )
-        
 
-        # V_selected2 = Local_PP2.RVO_update(
-        #     OS_list,
-        #     TS_list,
-        #     V_des,
-        # )
-
-        # print(V_selected2)
-
-        # TODO: Reduce the computation time for this part (~timeChckpt4_vesselNode)
         desired_spd_list = []
         desired_heading_list = []
 
-        # NOTE: Only one step ahead
         wp = inha.waypoint_generator(OS_list, V_selected, dt)
         wp_x = wp[0]
         wp_y = wp[1]
@@ -582,8 +529,6 @@ def main():
             else:
                 real_target_heading = sum_of_heading/len(data.target_heading_list)
 
-        # # < =========  인하대 모듈에서 나온 데이터를 최종적으로 송신하는 부분
-        # OS_pub_list = [int(OS_ID), False, waypointIndex, [wp_x], [wp_y],desired_spd, eta, eda, 0.5, 0.0, False, [], desired_spd, desired_heading, isNeedCA, ""]
         OS_pub_list = [
             int(OS_ID), 
             False,
@@ -654,43 +599,36 @@ def main():
         #     VO_operate
         # ]
 
-        savedata_list = [
-            int(OS_ID),
-            ship_dic2list[1],
-            ship_dic2list[2],
-            wp_x,
-            wp_y,
-            ship_dic2list[3],
-            OS_Vx,
-            OS_Vy,
-            ship_dic2list[4],
-            desired_heading,
-            encounter,
-            encounterMMSI
-        ]
+        # savedata_list = [
+        #     int(OS_ID),
+        #     ship_dic2list[1],
+        #     ship_dic2list[2],
+        #     wp_x,
+        #     wp_y,
+        #     ship_dic2list[3],
+        #     OS_Vx,
+        #     OS_Vy,
+        #     ship_dic2list[4],
+        #     desired_heading,
+        #     encounter,
+        #     encounterMMSI
+        # ]
 
-
-        writer.writerow(savedata_list)
+        # writer.writerow(savedata_list)
 
         data.path_out_publish(OS_pub_list)
         data.vis_out(vis_pub_list)
         data.cri_out(cri_pub_list)
         data.vo_out(vo_pub_list)
 
+        data.ori_out(TS_list_ori)
+        data.del_out(TS_list_d)
+        data.pre_out(TS_list)
+
         if local_goal_EDA < 5 * (ship_L/OS_scale) :
-        # 만약 `reach criterion`와 거리 비교를 통해 waypoint 도달하였다면, 
-        # 앞서 정의한 `waypint 도달 유무 확인용 flag`를 `True`로 바꾸어 `while`문 종료
             waypointIndex = (waypointIndex + 1) % len(wpts_x_os)
             targetspdIndex = waypointIndex
-            # if waypointIndex == len(wpts_x_os) - 1:
-            # data.waypoint_idx = (data.waypoint_idx + 1) % len(wpts_x_os)  # kriso 
-            # data.waypoint_idx = (int(data.waypoint_idx) + 1) % len(wpts_x_os) # 부경대
 
-            # targetspdIndex = data.waypoint_idx
-            # waypointIndex = (waypointIndex + 1) % len(wpts_x_os)
-            # targetspdIndex = waypointIndex
-
-                # rospy.signal_shutdown("종료")
         rate.sleep()
         
         # print("Loop end time: ", time.time() - startTime)

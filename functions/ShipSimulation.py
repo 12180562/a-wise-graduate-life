@@ -5,6 +5,13 @@ sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 from functions.MMG import KASS_MMG
 from functions.Controller import Controller
 from functions.mmg_non_dimension import MMG
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../mmgdynamics/src')))
+
+from mmgdynamics.dynamics import mmg_dynamics
+import mmgdynamics.calibrated_vessels as cvs
+from mmgdynamics.structs import Vessel
+
 from numpy import deg2rad, rad2deg
 from math import cos, sin, sqrt, pi
 import numpy as np 
@@ -92,9 +99,21 @@ class ShipSimulation(Controller): # `Controller()`       # Speed, Steering, Head
         # print(target_spd,target_rps,n)
 
         ##########  `t`에서의 자선의 속도와 타각을 바탕으로 `t+1`에서의 자선의 가속도 계산 ##########
-        velocity_matrix = np.array([[uBody], [vBody], [r_rad]])         # Pack the ship velocity components
         
+        velocity_matrix = np.array([[uBody], [vBody], [r_rad]])
         acceleration_matrix = KASS_mmg.main(delta_rad,n)
+
+# Nicpau part  
+#############################################
+
+        # velocity_matrix = np.array([uBody, vBody, r_rad]) # Pack the ship velocity components
+        # vessel = Vessel(**cvs.kvlcc2_full)
+        # acceleration_matrix = mmg_dynamics(velocity_matrix, vessel, target_heading, 
+        #                                    delta_rad, target_rps, 
+        #                                    0, 0, 0, 0)
+
+#############################################
+
         velocity_matrix = velocity_matrix + acceleration_matrix * self.dt
 
         '`velocity_matrix` is  `np.array` !  so, we need to change as scalar'   

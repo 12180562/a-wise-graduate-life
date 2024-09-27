@@ -402,12 +402,12 @@ def main():
                 if ts_ID not in TS_list_copy:
                     TS_list_copy[ts_ID] = TS_list[ts_ID]
                     encounterMMSI.append(ts_ID)
-                    print(f"TS was detected at around OS: {ts_ID}")
+                    # print(f"TS was detected at around OS: {ts_ID}")
             else:
                 if ts_ID in TS_list_copy:
                     del TS_list_copy[ts_ID]
                     encounterMMSI.remove(ts_ID)
-                    print(f"TS moved out of range: {ts_ID}")
+                    # print(f"TS moved out of range: {ts_ID}")
 
         TS_ID = encounterMMSI
         TS_list = TS_list_copy

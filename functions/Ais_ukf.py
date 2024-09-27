@@ -53,7 +53,10 @@ class UKF:
         x_new = x[0] + speed * dt * np.cos(np.deg2rad(heading))
         y_new = x[1] + speed * dt * np.sin(np.deg2rad(heading))
 
-        return np.array([x_new, y_new, speed, heading])
+        # 헤딩 값을 0~360도로 정상화
+        heading_new = (heading + 360) % 360
+
+        return np.array([x_new, y_new, speed, heading_new])
 
     # 관측 변환 함수
     def hx(self, x):
@@ -118,17 +121,3 @@ class UKF:
 
         # 현재 상태 반환
         return self.x, self.P
-
-
-
-# # UKF 객체 생성
-# ukf = UKF()
-
-# # 새로운 관측값 z와 시간 간격 dt가 주어졌을 때 상태 업데이트
-# z = np.array([10, 20, 0.1, 30])  # 예시 관측값
-# dt = 5  # 시간 간격 5초
-
-# # 상태 업데이트
-# updated_state = ukf.update(z, dt)
-
-# print("Updated state:", updated_state)

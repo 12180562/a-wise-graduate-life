@@ -9,7 +9,7 @@ from functions.Ais_ukf import UKF
 
 from udp_col_msg.msg import col, vis_info, cri_info, VO_info
 from udp_msgs.msg import frm_info, group_wpts_info
-from ukf_ais.msg import ShipInfo
+from ukf_ais.msg import ShipInfo, ResultInfo
 
 from math import sqrt, atan2
 from numpy import rad2deg
@@ -35,6 +35,8 @@ class data_inNout:
         self.ori_pub = rospy.Publisher('TS_list_ori', ShipInfo, queue_size=10)
         self.del_pub = rospy.Publisher('TS_list_d', ShipInfo, queue_size=10)
         self.pre_pub = rospy.Publisher('TS_list_predict', ShipInfo, queue_size=10)
+
+        self.result_pub = rospy.Publisher('result_info', ResultInfo, queue_size=10)
 
         self.ship_ID = []
         self.waypoint_idx = 0
@@ -202,6 +204,20 @@ class data_inNout:
 
             self.pre_pub.publish(message)
 
+    def result_out(self, pos_err, cov):
+        ukf_result = ResultInfo()
+        for ship_ID, ship_data in pos_err.items():
+            # ukf_result.Ship_ID = ship_ID
+            ukf_result.Pos_Err = ship_data
+
+        for ship_ID, ship_data in cov.items(): 
+            ukf_result.Cov_XX = ship_data[0]
+            ukf_result.Cov_YY = ship_data[1]
+            ukf_result.Cov_UU = ship_data[2]
+            ukf_result.Cov_Heading = ship_data[3]
+
+            self.result_pub.publish(ukf_result)
+
 def main():  
     rospack = rospkg.RosPack()  
     package_path = rospack.get_path('kass_inha')
@@ -259,6 +275,13 @@ def main():
     predicted_state = []
     previous_input_list = {}
 
+    X_diff = {}
+    Y_diff = {}
+    U_diff = {}
+    H_diff = {}
+    pos_err = {}
+    cov = {}
+
     first_loop = True
     first_publish = True
     heading_diff = 0.0
@@ -300,7 +323,7 @@ def main():
 # UKF part
 #####################################################################################################################
         
-        print("TS_list_ori: ", TS_list_ori)
+        # print("TS_list_ori: ", TS_list_ori)
         if first_loop:
             for ts_ID in TS_ID:
                 ukf_instance[ts_ID] = UKF()
@@ -319,14 +342,14 @@ def main():
             elif heading_diff >= 360:
                 heading_diff -= 360
 
-            if abs(heading_diff) >= 15:
+            if abs(heading_diff) >= 30:
                 TS_list_d[ts_ID] = TS_list_ori[ts_ID]
 
             else:
                 TS_list_d[ts_ID] = TS_list_d[ts_ID]
 
         first_publish = False
-        print("delay: ",TS_list_d)
+        # print("delay: ",TS_list_d)
 
         input_list = []
         TS_list = copy.deepcopy(TS_list_d)
@@ -350,15 +373,19 @@ def main():
                 if key in TS_list[ts_ID]:
                     TS_list[ts_ID][key] = value
 
-        for ts_ID in TS_ID:
-            X_diff = TS_list[ts_ID]["Pos_X"] - TS_list_ori[ts_ID]["Pos_X"]
-            Y_diff = TS_list[ts_ID]["Pos_Y"] - TS_list_ori[ts_ID]["Pos_Y"]
-            U_diff = TS_list[ts_ID]["Vel_U"] - TS_list_ori[ts_ID]["Vel_U"]
-            H_diff = TS_list[ts_ID]["Heading"] - TS_list_ori[ts_ID]["Heading"]
+            X_diff[ts_ID] = TS_list[ts_ID]["Pos_X"] - TS_list_ori[ts_ID]["Pos_X"]
+            Y_diff[ts_ID] = TS_list[ts_ID]["Pos_Y"] - TS_list_ori[ts_ID]["Pos_Y"]
+            U_diff[ts_ID] = TS_list[ts_ID]["Vel_U"] - TS_list_ori[ts_ID]["Vel_U"]
+            H_diff[ts_ID] = TS_list[ts_ID]["Heading"] - TS_list_ori[ts_ID]["Heading"]
         
-        print("predict: ",TS_list)
-        print("\n")
-        print(X_diff)
+            pos_err[ts_ID] = np.sqrt(X_diff[ts_ID]**2 + Y_diff[ts_ID]**2)
+            cov[ts_ID] = np.diagonal(covariance)
+
+            # print("predict: ",TS_list)
+            print("\n")
+            print(pos_err[ts_ID])
+            print("\n")
+            print(cov[ts_ID])
 
 #####################################################################################################################
 
@@ -624,6 +651,7 @@ def main():
         data.ori_out(TS_list_ori)
         data.del_out(TS_list_d)
         data.pre_out(TS_list)
+        data.result_out(pos_err, cov)
 
         if local_goal_EDA < 5 * (ship_L/OS_scale) :
             waypointIndex = (waypointIndex + 1) % len(wpts_x_os)

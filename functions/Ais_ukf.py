@@ -3,7 +3,7 @@ import numpy as np
 class UKF:
     def __init__(self):
         self.Q = np.diag([0.01, 0.01, 0.01, 0.01])  # 시스템 노이즈 공분산
-        self.R = np.diag([0.1, 0.1, 0.01, 0.1])  # 관측 노이즈 공분산
+        self.R = np.diag([0.1, 0.1, 0.1, 0.1])  # 관측 노이즈 공분산
         self.x = np.array([0, 0, 0, 0])  # x, y, heading, speed 초기 값
         self.P = 100 * np.eye(4)  # 초기 공분산
         self.n = 4 # 상태 벡터의 크기
@@ -54,9 +54,9 @@ class UKF:
         y_new = x[1] + speed * dt * np.sin(np.deg2rad(heading))
 
         # 헤딩 값을 0~360도로 정상화
-        heading_new = (heading + 360) % 360
+        # heading_new = (heading + 360) % 360
 
-        return np.array([x_new, y_new, speed, heading_new])
+        return np.array([x_new, y_new, speed, heading])
 
     # 관측 변환 함수
     def hx(self, x):

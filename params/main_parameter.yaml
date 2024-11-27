@@ -166,9 +166,9 @@ timeHorizon: 300  # 350일때 상대거리 800 # 150일때 상대거리 약 13L
 filter_length : 10
 
 ############################################
-
-min_targetSpeed : 0.95
-max_targetSpeed : 1.25
+# m/s
+min_targetSpeed : 1.0
+max_targetSpeed : 1.2
 num_targetSpeedCandidates : 3
 
 min_targetHeading_deg_local : -45.0
@@ -186,7 +186,7 @@ ship3_index : 10
 ############################################
 
 ukf_dt: 1
-ais_delay: 5
+ais_delay: 10
 
 ukf_angle_dt: 1
 
@@ -209,10 +209,10 @@ shipInfo_all:
     ship_scale : 70,
     ship_ID : 1000, ## 자선의 ship ID 정의
     ship_domain_radius : 44.0,  # original
-    target_speed : 6.0,  #[knots]
+    target_speed : 10.0,  #[knots]
     initial_start_x : 0.0,    # [m]
     initial_start_y : 0.0,    # [m]
-    initial_start_U : 7.0,    # [knots] // 너무 작으면 발산함
+    initial_start_U : 10.0,    # [knots] // 너무 작으면 발산함
     initial_start_psi : 0,   # [deg]
     include_inha_modules : True  # if) `True`라면 인하대 충돌회피 모듈이 작동함, // if `False`라면 인하대 충돌회피 모듈은 작동하지 않음!
   }
@@ -223,11 +223,11 @@ shipInfo_all:
     ship_scale : 70,
     ship_ID : 2001, ## 자선의 ship ID 정의
     ship_domain_radius : 44.0,  # original
-    target_speed : 6.0,  #[knots]
-    initial_start_x : 150.0,    # [m]
-    initial_start_y : 150.0,    # [m]
-    initial_start_U : 7.0,    # [knots] // 너무 작으면 발산함
-    initial_start_psi : 270,   # [deg]
+    target_speed : 10.0,  #[knots]
+    initial_start_x : 300.0,    # [m]
+    initial_start_y : 0.0,    # [m]
+    initial_start_U : 8.0,    # [knots] // 너무 작으면 발산함
+    initial_start_psi : 180,   # [deg]
     include_inha_modules : False  # if) `True`라면 인하대 충돌회피 모듈이 작동함, // if `False`라면 인하대 충돌회피 모듈은 작동하지 않음!
   }
 
@@ -282,13 +282,13 @@ waypoint_List: {
     0.0, 0.0,
   ],
   wpts_x_ship2: [
-    150, 150
+    170, 100
     # 150.0,  200.0,  150.0,  100.0,  150.0,  100.0,  150.0,  200.0
     # 500.0, 500.0, 500.0, 500.0, 500.0, 500.0, 
     # 0, 300
   ],
   wpts_y_ship2: [
-    -150, 150
+    0, 150
     # 0.0,    50,      0.0,    50,   0.0,    -50,   0.0,  -50
     # 100.0, -100, 100.0, -100, 100.0, -100
     # 0, 0
@@ -319,12 +319,12 @@ waypoint_List: {
 }
 
 target_spd_List: {
-  target_speed_ship1: [
-    1.0, 1.0,
+  target_speed_ship1: [ # m/s
+    1, 1,
     ],
 
   target_speed_ship2: [
-    1.0, 1.0
+    1, 1,
     # 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 
     # 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
     ],

@@ -33,7 +33,7 @@ class data_inNout:
         self.Vis_pub = rospy.Publisher('/vis1_info', vis_info, queue_size=10)
 
         self.ori_pub = rospy.Publisher('TS_list_ori', ShipInfo, queue_size=10)
-        self.del_pub = rospy.Publisher('TS_list_d', ShipInfo, queue_size=10)
+        self.del_pub = rospy.Publisher('TS_list_del', ShipInfo, queue_size=10)
         self.pre_pub = rospy.Publisher('TS_list_predict', ShipInfo, queue_size=10)
 
         self.result_pub = rospy.Publisher('result_info', ResultInfo, queue_size=10)
@@ -269,9 +269,12 @@ def main():
     delay = rospy.get_param('ais_delay')
     publish_interval = rospy.Duration(delay)  # 발행 주기를 5초로 설정
     
-    ukf_instance = {}    
-    TS_list_d={}
-    TS_list={}
+    ukf_instance = {}
+    TS_list_ori={}  
+    TS_list_del={}
+    TS_list_pre = {}
+
+
     predicted_state = []
     previous_input_list = {}
 
@@ -332,32 +335,34 @@ def main():
 
         for ts_ID in TS_ID:
             if(current_time - last_publish_time >= publish_interval) or first_publish:
-                TS_list_d[ts_ID] = TS_list_ori[ts_ID]
+                TS_list_del[ts_ID] = TS_list_ori[ts_ID]
                 last_publish_time = current_time
+                print("@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@")
 
-            heading_diff = TS_list_d[ts_ID]['Heading'] - TS_list_ori[ts_ID]['Heading']
+            heading_diff = TS_list_del[ts_ID]['Heading'] - TS_list_ori[ts_ID]['Heading']
 
             if heading_diff < 0:
                 heading_diff += 360
             elif heading_diff >= 360:
                 heading_diff -= 360
 
-            if abs(heading_diff) >= 30:
-                TS_list_d[ts_ID] = TS_list_ori[ts_ID]
+            if abs(heading_diff) >= 5:
+                TS_list_del[ts_ID] = TS_list_ori[ts_ID]
 
             else:
-                TS_list_d[ts_ID] = TS_list_d[ts_ID]
+                TS_list_del[ts_ID] = TS_list_del[ts_ID]
 
         first_publish = False
-        # print("delay: ",TS_list_d)
+        # print("delay: ",TS_list_del)
 
         input_list = []
-        TS_list = copy.deepcopy(TS_list_d)
+        TS_list_pre = copy.deepcopy(TS_list_ori)
+        
         for ts_ID in TS_ID:
-            input_list.append(TS_list_d[ts_ID]['Pos_X'])
-            input_list.append(TS_list_d[ts_ID]['Pos_Y'])
-            input_list.append(TS_list_d[ts_ID]['Vel_U'])
-            input_list.append(TS_list_d[ts_ID]['Heading'])
+            input_list.append(TS_list_del[ts_ID]['Pos_X'])
+            input_list.append(TS_list_del[ts_ID]['Pos_Y'])
+            input_list.append(TS_list_del[ts_ID]['Vel_U'])
+            input_list.append(TS_list_del[ts_ID]['Heading'])
 
             if ts_ID in previous_input_list and previous_input_list[ts_ID] == input_list:
                 predicted_state, covariance = ukf_instance[ts_ID].predict(ukf_dt)
@@ -370,25 +375,28 @@ def main():
             update_keys = ['Pos_X', 'Pos_Y', 'Vel_U', 'Heading']
 
             for key, value in zip(update_keys, predicted_state):
-                if key in TS_list[ts_ID]:
-                    TS_list[ts_ID][key] = value
+                if key in TS_list_pre[ts_ID]:
+                    TS_list_pre[ts_ID][key] = value
 
-            X_diff[ts_ID] = TS_list[ts_ID]["Pos_X"] - TS_list_ori[ts_ID]["Pos_X"]
-            Y_diff[ts_ID] = TS_list[ts_ID]["Pos_Y"] - TS_list_ori[ts_ID]["Pos_Y"]
-            U_diff[ts_ID] = TS_list[ts_ID]["Vel_U"] - TS_list_ori[ts_ID]["Vel_U"]
-            H_diff[ts_ID] = TS_list[ts_ID]["Heading"] - TS_list_ori[ts_ID]["Heading"]
+            X_diff[ts_ID] = TS_list_pre[ts_ID]["Pos_X"] - TS_list_ori[ts_ID]["Pos_X"]
+            Y_diff[ts_ID] = TS_list_pre[ts_ID]["Pos_Y"] - TS_list_ori[ts_ID]["Pos_Y"]
+            U_diff[ts_ID] = TS_list_pre[ts_ID]["Vel_U"] - TS_list_ori[ts_ID]["Vel_U"]
+            H_diff[ts_ID] = TS_list_pre[ts_ID]["Heading"] - TS_list_ori[ts_ID]["Heading"]
         
             pos_err[ts_ID] = np.sqrt(X_diff[ts_ID]**2 + Y_diff[ts_ID]**2)
             cov[ts_ID] = np.diagonal(covariance)
 
-            # print("predict: ",TS_list)
-            print("\n")
-            print(pos_err[ts_ID])
-            print("\n")
-            print(cov[ts_ID])
-
+            # print("\n")
+            # print(pos_err[ts_ID])
+            # print("\n")
+            # print(cov[ts_ID])
+            
+            # TS_list = TS_list_ori
+            # TS_list = TS_list_del
+            TS_list = TS_list_pre
 #####################################################################################################################
-
+        print(TS_list)
+        print("\n")
         OS_Vx, OS_Vy = inha.U_to_vector_V(OS_list['Vel_U'], OS_list['Heading'])
 
         OS_list['V_x'] = OS_Vx
@@ -398,10 +406,7 @@ def main():
 
         V_des = Local_PP.vectorV_to_goal(OS_list, Local_goal, target_speed)
 
-        TS_list = inha.TS_info_supplement(
-            OS_list, 
-            TS_list,
-            )
+        TS_list = inha.TS_info_supplement(OS_list, TS_list)
         
         TS_RD_temp = []
         TS_RC_temp = []
@@ -419,9 +424,6 @@ def main():
         TS_Rs_temp = []
         TS_Rp_temp = []
         TS_ENC_temp = []
-
-        encounterMMSI = []
-        TS_list_copy = {}
 
         for ts_ID in TS_ID:
             temp_RD = TS_list[ts_ID]['RD']
@@ -474,32 +476,6 @@ def main():
             # print(temp_enc)
 
             distance = sqrt((OS_list["Pos_X"]-TS_list[ts_ID]["Pos_X"])**2+(OS_list["Pos_Y"]-TS_list[ts_ID]["Pos_Y"])**2)
-
-            if distance <= rospy.get_param("detecting_distance"):
-                if ts_ID not in TS_list_copy:
-                    TS_list_copy[ts_ID] = TS_list[ts_ID]
-                    encounterMMSI.append(ts_ID)
-                    # print(f"TS was detected at around OS: {ts_ID}")
-            else:
-                if ts_ID in TS_list_copy:
-                    del TS_list_copy[ts_ID]
-                    encounterMMSI.remove(ts_ID)
-                    # print(f"TS moved out of range: {ts_ID}")
-
-        TS_ID = encounterMMSI
-        TS_list = TS_list_copy
-
-        # print("distance : ", distance)
-        # print("DCPA: ", temp_DCPA)
-        
-        if len(encounterMMSI) == 0:
-            encounter = False
-        else:
-            encounter = True
-
-        # print("TS_ID:           ", TS_ID)
-        # print("encounter:       ", encounter)
-        # print("encounterMMSI:   ", encounterMMSI)
 
         V_selected, pub_collision_cone = Local_PP.VO_update(
             OS_list, 
@@ -649,8 +625,8 @@ def main():
         data.vo_out(vo_pub_list)
 
         data.ori_out(TS_list_ori)
-        data.del_out(TS_list_d)
-        data.pre_out(TS_list)
+        data.del_out(TS_list_del)
+        data.pre_out(TS_list_pre)
         data.result_out(pos_err, cov)
 
         if local_goal_EDA < 5 * (ship_L/OS_scale) :

@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Site BuildName="(empty)"
+	BuildStamp="20241027-0620-Experimental"
+	Name="hdl"
+	Generator="ctest-3.10.2"
+	CompilerName="/usr/bin/c++"
+	CompilerVersion="7.5.0"
+	OSName="Linux"
+	Hostname="hdl"
+	OSRelease="5.4.0-150-generic"
+	OSVersion="#167~18.04.1-Ubuntu SMP Wed May 24 00:51:42 UTC 2023"
+	OSPlatform="x86_64"
+	Is64Bits="1"
+	VendorString="AuthenticAMD"
+	VendorID="Advanced Micro Devices"
+	FamilyID="25"
+	ModelID="33"
+	ProcessorCacheSize="512"
+	NumberOfLogicalCPU="32"
+	NumberOfPhysicalCPU="16"
+	TotalVirtualMemory="2047"
+	TotalPhysicalMemory="128796"
+	LogicalProcessorsPerPhysical="2"
+	ProcessorClockFrequency="2235.16"
+	>
+	<Testing>
+		<StartDateTime>Oct 27 15:20 KST</StartDateTime>
+		<StartTestTime>1730010046</StartTestTime>
+		<TestList/>
+		<EndDateTime>Oct 27 15:20 KST</EndDateTime>
+		<EndTestTime>1730010046</EndTestTime>
+		<ElapsedMinutes>0</ElapsedMinutes>
+	</Testing>
+</Site>
